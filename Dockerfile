@@ -35,16 +35,21 @@ RUN sed -i 's/listen\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf && \
 RUN addgroup -S appgroup && \
     adduser -S -G appgroup -H -D -h /var/cache/nginx appuser && \
     mkdir -p /var/cache/nginx && \
+    mkdir -p /var/lib/nginx/logs && \
+    touch /var/lib/nginx/logs/error.log && \
+    touch /var/lib/nginx/logs/access.log && \
     chown -R appuser:appgroup /var/cache/nginx && \
     chown -R appuser:appgroup /var/log/nginx && \
+    chown -R appuser:appgroup /var/lib/nginx && \
     chown -R appuser:appgroup /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
     chown -R appuser:appgroup /var/run/nginx.pid && \
-    chmod -R g+w /var/cache/nginx && \
-    chmod -R g+w /var/log/nginx && \
-    chmod -R g+w /etc/nginx/conf.d && \
+    chmod -R 755 /var/cache/nginx && \
+    chmod -R 755 /var/log/nginx && \
+    chmod -R 755 /var/lib/nginx && \
+    chmod -R 755 /etc/nginx/conf.d && \
     chown -R appuser:appgroup /usr/share/nginx/html && \
-    chmod -R g+w /usr/share/nginx/html
+    chmod -R 755 /usr/share/nginx/html
 
 # 切換到非 root 用戶
 USER appuser:appgroup

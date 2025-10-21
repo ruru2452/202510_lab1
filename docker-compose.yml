@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   tic-tac-toe:
-    image: ghcr.io/tryweb/202510_lab1:latest
+    image: ghcr.io/ruru2452/202510_lab1:latest
     container_name: tic-tac-toe-game
     ports:
       - "8080:8080"
@@ -17,6 +17,7 @@ services:
       - /tmp
       - /var/cache/nginx
       - /var/run
+      - /var/lib/nginx/logs
     cap_drop:
       - ALL
     cap_add:
