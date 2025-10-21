@@ -60,18 +60,164 @@ const Validator = {
 };
 
 /**
- * 日誌記錄器
+ * 日誌嚴重程度等級
+ * @readonly
+ * @enum {string}
+ */
+const LogSeverity = {
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR',
+    SECURITY: 'SECURITY'
+};
+
+/**
+ * 預定義的日誌事件類型
+ * @readonly
+ * @enum {string}
+ */
+const LogEventType = {
+    VALIDATION_ERROR: 'VALIDATION_ERROR',
+    SANITIZATION: 'CONTENT_SANITIZATION',
+    XSS_ATTEMPT: 'XSS_ATTEMPT',
+    DOM_MANIPULATION: 'DOM_MANIPULATION',
+    API_ERROR: 'API_ERROR'
+};
+
+/**
+ * 安全的日誌記錄器
  * @type {Object}
  */
 const Logger = {
     /**
+     * 格式化日誌消息
+     * @private
+     * @param {LogSeverity} severity - 日誌嚴重程度
+     * @param {LogEventType} eventType - 事件類型
+     * @param {Object} data - 日誌數據
+     * @returns {Object} 格式化的日誌對象
+     */
+    _formatLogMessage(severity, eventType, data) {
+        return {
+            timestamp: new Date().toISOString(),
+            severity,
+            eventType,
+            data: this._sanitizeLogData(data),
+            sessionId: this._getSessionId()
+        };
+    },
+
+    /**
+     * 淨化日誌數據
+     * @private
+     * @param {Object} data - 原始數據
+     * @returns {Object} 淨化後的數據
+     */
+    _sanitizeLogData(data) {
+        if (!data) return {};
+
+        // 深度克隆以避免修改原始數據
+        const sanitized = JSON.parse(JSON.stringify(data));
+
+        // 移除敏感信息
+        const sensitiveKeys = ['password', 'token', 'secret', 'key'];
+        this._recursivelyRemoveSensitive(sanitized, sensitiveKeys);
+
+        // 截斷長字符串
+        this._recursivelyTruncateStrings(sanitized, 1000);
+
+        return sanitized;
+    },
+
+    /**
+     * 遞迴移除敏感數據
+     * @private
+     * @param {Object} obj - 要處理的對象
+     * @param {string[]} sensitiveKeys - 敏感鍵名列表
+     */
+    _recursivelyRemoveSensitive(obj, sensitiveKeys) {
+        if (typeof obj !== 'object' || obj === null) return;
+
+        for (const key in obj) {
+            if (sensitiveKeys.includes(key.toLowerCase())) {
+                obj[key] = '[REDACTED]';
+            } else if (typeof obj[key] === 'object') {
+                this._recursivelyRemoveSensitive(obj[key], sensitiveKeys);
+            }
+        }
+    },
+
+    /**
+     * 遞迴截斷長字符串
+     * @private
+     * @param {Object} obj - 要處理的對象
+     * @param {number} maxLength - 最大長度
+     */
+    _recursivelyTruncateStrings(obj, maxLength) {
+        if (typeof obj !== 'object' || obj === null) return;
+
+        for (const key in obj) {
+            if (typeof obj[key] === 'string' && obj[key].length > maxLength) {
+                obj[key] = obj[key].substring(0, maxLength) + '...';
+            } else if (typeof obj[key] === 'object') {
+                this._recursivelyTruncateStrings(obj[key], maxLength);
+            }
+        }
+    },
+
+    /**
+     * 獲取會話 ID
+     * @private
+     * @returns {string} 會話 ID
+     */
+    _getSessionId() {
+        if (!window._logSessionId) {
+            window._logSessionId = Math.random().toString(36).substring(2, 15);
+        }
+        return window._logSessionId;
+    },
+
+    /**
      * 記錄安全相關事件
-     * @param {string} action - 操作類型
+     * @param {LogEventType} eventType - 事件類型
      * @param {Object} details - 詳細信息
      */
-    logSecurityEvent(action, details) {
-        console.warn(`安全事件: ${action}`, details);
-        // 這裡可以添加更多日誌記錄邏輯，如發送到服務器
+    logSecurityEvent(eventType, details) {
+        if (!Object.values(LogEventType).includes(eventType)) {
+            eventType = LogEventType.SECURITY;
+        }
+
+        const logMessage = this._formatLogMessage(
+            LogSeverity.SECURITY,
+            eventType,
+            details
+        );
+
+        // 使用安全的日誌格式
+        console.warn('%s: %s', 
+            'Security Event',
+            JSON.stringify(logMessage, null, 2)
+        );
+
+        // 可以添加將日誌發送到服務器的邏輯
+        this._sendToLogServer(logMessage);
+    },
+
+    /**
+     * 發送日誌到服務器
+     * @private
+     * @param {Object} logMessage - 日誌消息
+     */
+    _sendToLogServer(logMessage) {
+        // 這裡實現發送日誌到服務器的邏輯
+        // 例如使用 fetch API 或 beacon API
+        try {
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/api/logs', JSON.stringify(logMessage));
+            }
+        } catch (error) {
+            // 靜默失敗 - 不在日誌中記錄日誌錯誤
+        }
     }
 };
 
