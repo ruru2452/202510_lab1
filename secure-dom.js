@@ -1,33 +1,71 @@
-// 不安全的方式 - 不要這樣做
-function unsafeUpdate(userInput) {
-    // 危險：直接將使用者輸入插入為 HTML
-    element.innerHTML = userInput;            // 有 XSS 風險
-    element.outerHTML = userInput;           // 有 XSS 風險
-    document.write(userInput);               // 有 XSS 風險
+/**
+ * 安全的 DOM 操作示例
+ * 這個文件展示了如何安全地處理 DOM 操作，避免 XSS 漏洞
+ */
+
+/**
+ * 使用純文本更新元素內容
+ * @param {HTMLElement} element - 要更新的目標元素
+ * @param {string} userInput - 使用者輸入的內容
+ */
+function updateAsText(element, userInput) {
+    if (!element || typeof userInput !== 'string') {
+        throw new Error('無效的參數');
+    }
+    element.textContent = userInput;
 }
 
-// 安全的方式
-function safeUpdate(userInput) {
-    // 方法 1：使用 textContent（最安全的方式）
-    element.textContent = userInput;
-
-    // 方法 2：使用 createTextNode
+/**
+ * 創建新的文本節點
+ * @param {HTMLElement} element - 父元素
+ * @param {string} userInput - 使用者輸入的內容
+ */
+function appendTextNode(element, userInput) {
+    if (!element || typeof userInput !== 'string') {
+        throw new Error('無效的參數');
+    }
     const textNode = document.createTextNode(userInput);
     element.appendChild(textNode);
+}
 
-    // 方法 3：如果需要創建元素
-    const safeDiv = document.createElement('div');
-    safeDiv.textContent = userInput;
-    element.appendChild(safeDiv);
-
-    // 方法 4：如果確實需要 HTML（請謹慎使用）
-    const sanitizedHTML = DOMPurify.sanitize(userInput);
-    // 方法 1: 使用 textContent
+/**
+ * 創建新的元素並添加文本內容
+ * @param {HTMLElement} parent - 父元素
+ * @param {string} tagName - 新元素的標籤名
+ * @param {string} userInput - 使用者輸入的內容
+ * @returns {HTMLElement} 新創建的元素
+ */
+function createElementWithText(parent, tagName, userInput) {
+    if (!parent || !tagName || typeof userInput !== 'string') {
+        throw new Error('無效的參數');
+    }
+    const element = document.createElement(tagName);
     element.textContent = userInput;
+    parent.appendChild(element);
+    return element;
+}
 
-    // 方法 2: 使用 DOM API
-    const newElement = document.createElement('div');
-    const textNode = document.createTextNode(userInput);
+/**
+ * 安全地處理 HTML 內容（需要 DOMPurify 庫）
+ * @param {HTMLElement} element - 目標元素
+ * @param {string} userInput - 使用者輸入的 HTML 內容
+ */
+function sanitizeAndSetHTML(element, userInput) {
+    if (!element || typeof userInput !== 'string') {
+        throw new Error('無效的參數');
+    }
+    if (typeof DOMPurify === 'undefined') {
+        throw new Error('DOMPurify 未載入');
+    }
+    
+    const config = {
+        ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'span', 'p', 'br'],
+        ALLOWED_ATTR: ['class', 'id', 'data-*'],
+    };
+    
+    const cleanHTML = DOMPurify.sanitize(userInput, config);
+    element.innerHTML = cleanHTML;
+}
     newElement.appendChild(textNode);
 
     // 方法 3: HTML 轉義函數
