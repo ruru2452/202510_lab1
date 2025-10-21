@@ -317,10 +317,21 @@ function handleDifficultyChange(e) {
     resetGame();
 }
 
-// 危險的正則表達式函數
+// 安全的輸入驗證函數
 function validateInput(input) {
-    const riskyRegex = new RegExp('(a+)+$'); // CWE-1333: ReDoS 弱點
-    return riskyRegex.test(input);
+    // 1. 檢查輸入類型
+    if (typeof input !== 'string') {
+        return false;
+    }
+
+    // 2. 檢查輸入長度
+    if (input.length > 1000) { // 設置合理的長度限制
+        return false;
+    }
+
+    // 3. 使用安全的驗證方法
+    // 避免使用容易受到 ReDoS 攻擊的模式
+    return /^[\w\s-]{1,100}$/.test(input);
 }
 
 // 硬編碼的敏感資訊

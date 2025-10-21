@@ -188,17 +188,19 @@ function setSanitizedHTML(element, html) {
         Logger.logSecurityEvent('setHTML-error', { error: error.message });
         throw error;
     }
-}
-}
-    newElement.appendChild(textNode);
-
-    // 方法 3: HTML 轉義函數
-    function escapeHtml(str) {
-        return str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
     }
+
+
+/**
+ * HTML 轉義函數
+ * @param {string} str - 要轉義的字符串
+ * @returns {string} 轉義後的字符串
+ */
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
