@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   tic-tac-toe:
     image: ghcr.io/tryweb/202510_lab1:latest
@@ -7,6 +9,18 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Asia/Taipei
+    # 安全相關配置
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
       interval: 30s
@@ -16,3 +30,8 @@ services:
     labels:
       - "com.example.description=井字遊戲 - 靜態網頁應用"
       - "com.example.version=latest"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
