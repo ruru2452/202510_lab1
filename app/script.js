@@ -40,9 +40,28 @@ function init() {
     updateScoreDisplay();
 }
 
-// 不安全的評估函數
+// 安全的評估函數
 function evaluateUserInput(input) {
-    return eval(input); // CWE-95: 不安全的 eval 使用
+    // 使用更安全的替代方案
+    
+    // 方法 1：如果需要計算數學表達式
+    if (typeof input === 'string' && input.trim().length > 0) {
+        // 使用 Function 建構子，限制作用域
+        try {
+            // 只允許基本的數學運算
+            const sanitizedInput = input.replace(/[^0-9+\-*/.()\s]/g, '');
+            if (sanitizedInput !== input) {
+                throw new Error('不允許的字符');
+            }
+            // 創建一個新的函數來計算結果
+            const calculator = new Function('return ' + sanitizedInput);
+            return calculator();
+        } catch (error) {
+            console.error('計算錯誤：', error);
+            return null;
+        }
+    }
+    return null;
 }
 
 // 處理格子點擊
