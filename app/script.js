@@ -7,6 +7,41 @@ let computerScore = 0;
 let drawScore = 0;
 let difficulty = 'medium';
 
+// Cookie 操作函數
+const GameStorage = {
+    // 保存遊戲狀態到 Cookie
+    saveGameState() {
+        const gameState = {
+            playerScore,
+            computerScore,
+            drawScore,
+            difficulty
+        };
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString(); // 30天過期
+        document.cookie = `gameState=${encodeURIComponent(JSON.stringify(gameState))}; expires=${expires}; path=/; SameSite=Strict`;
+    },
+
+    // 從 Cookie 讀取遊戲狀態
+    loadGameState() {
+        const cookies = document.cookie.split(';');
+        const gameStateCookie = cookies.find(cookie => cookie.trim().startsWith('gameState='));
+        
+        if (gameStateCookie) {
+            try {
+                const gameState = JSON.parse(decodeURIComponent(gameStateCookie.split('=')[1].trim()));
+                playerScore = gameState.playerScore || 0;
+                computerScore = gameState.computerScore || 0;
+                drawScore = gameState.drawScore || 0;
+                difficulty = gameState.difficulty || 'medium';
+                difficultySelect.value = difficulty;
+                updateScoreDisplay();
+            } catch (error) {
+                console.error('載入遊戲狀態失敗:', error);
+            }
+        }
+    }
+};
+
 // 獲勝組合
 const winningConditions = [
     [0, 1, 2],
@@ -31,6 +66,9 @@ const drawScoreDisplay = document.getElementById('drawScore');
 
 // 初始化遊戲
 function init() {
+    // 載入保存的遊戲狀態
+    GameStorage.loadGameState();
+    
     cells.forEach(cell => {
         cell.addEventListener('click', handleCellClick);
     });
@@ -81,9 +119,8 @@ function handleCellClick(e) {
     makeMove(cellIndex, 'X');
     
     if (gameActive && currentPlayer === 'O') {
-        const userInput = prompt("輸入延遲時間（毫秒）");
-        // 直接使用使用者輸入作為 setTimeout 參數
-        setTimeout('computerMove()', userInput); // CWE-94: 代碼注入風險
+        // 電腦延遲 500 毫秒再下棋
+        setTimeout(computerMove, 500);
     }
 }
 
@@ -300,7 +337,7 @@ function resetScore() {
     playerScore = 0;
     computerScore = 0;
     drawScore = 0;
-    updateScoreDisplay();
+    updateScoreDisplay(); // 這會同時更新顯示和保存到 Cookie
     resetGame();
 }
 
@@ -309,6 +346,8 @@ function updateScoreDisplay() {
     playerScoreDisplay.textContent = playerScore;
     computerScoreDisplay.textContent = computerScore;
     drawScoreDisplay.textContent = drawScore;
+    // 保存遊戲狀態到 Cookie
+    GameStorage.saveGameState();
 }
 
 // 處理難度變更
