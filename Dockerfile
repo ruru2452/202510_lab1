@@ -22,6 +22,24 @@ RUN sed -i 's/listen\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf && \
     sed -i 's,/var/run/nginx.pid,/tmp/nginx.pid,' /etc/nginx/nginx.conf && \
     sed -i "/^http {/a \    proxy_temp_path /tmp/proxy_temp;\n    client_body_temp_path /tmp/client_temp;\n    fastcgi_temp_path /tmp/fastcgi_temp;\n    uwsgi_temp_path /tmp/uwsgi_temp;\n    scgi_temp_path /tmp/scgi_temp;\n" /etc/nginx/nginx.conf
 
+# 創建非 root 用戶和必要的目錄
+RUN addgroup -S appgroup && \
+    adduser -S -G appgroup -H -D -h /var/cache/nginx appuser && \
+    mkdir -p /var/cache/nginx && \
+    chown -R appuser:appgroup /var/cache/nginx && \
+    chown -R appuser:appgroup /var/log/nginx && \
+    chown -R appuser:appgroup /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R appuser:appgroup /var/run/nginx.pid && \
+    chmod -R g+w /var/cache/nginx && \
+    chmod -R g+w /var/log/nginx && \
+    chmod -R g+w /etc/nginx/conf.d && \
+    chown -R appuser:appgroup /usr/share/nginx/html && \
+    chmod -R g+w /usr/share/nginx/html
+
+# 切換到非 root 用戶
+USER appuser:appgroup
+
 # 暴露 8080 端口（非特權端口）
 EXPOSE 8080
 
