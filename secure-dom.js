@@ -168,22 +168,42 @@ function setSanitizedHTML(element, html) {
             throw new Error('DOMPurify 未載入');
         }
 
-        const cleanHTML = DOMPurify.sanitize(html, {
+        // 使用 DOMPurify 淨化 HTML 並返回 DocumentFragment
+        const cleanFragment = DOMPurify.sanitize(html, {
             ALLOWED_TAGS: SecurityConfig.ALLOWED_TAGS,
             ALLOWED_ATTR: SecurityConfig.ALLOWED_ATTR,
-            RETURN_DOM_FRAGMENT: false,
-            SANITIZE_DOM: true
+            RETURN_DOM_FRAGMENT: true, // 返回 DocumentFragment 而不是字串
+            SANITIZE_DOM: true,
+            USE_PROFILES: {
+                html: true,
+                svg: false,
+                svgFilters: false,
+                mathMl: false
+            },
+            FORBID_CONTENTS: ['form', 'input', 'script', 'style', 'textarea', 'iframe'],
+            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+            FORBID_ATTR: ['on*', 'style', 'href', 'src']
         });
 
-        // 在設置 innerHTML 之前記錄潛在的風險
-        if (cleanHTML !== html) {
+        // 記錄潛在的內容修改
+        const sanitizedHTML = DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: SecurityConfig.ALLOWED_TAGS,
+            ALLOWED_ATTR: SecurityConfig.ALLOWED_ATTR
+        });
+        if (sanitizedHTML !== html) {
             Logger.logSecurityEvent('content-sanitized', {
                 original: html,
-                sanitized: cleanHTML
+                sanitized: sanitizedHTML
             });
         }
 
-        element.innerHTML = cleanHTML;
+        // 清空目標元素
+        while (element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+
+        // 安全地將淨化後的 DocumentFragment 添加到 DOM
+        element.appendChild(cleanFragment);
     } catch (error) {
         Logger.logSecurityEvent('setHTML-error', { error: error.message });
         throw error;
@@ -203,4 +223,91 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+/**
+ * 安全地渲染富文本內容
+ * @param {HTMLElement} container - 容器元素
+ * @param {string} content - 要渲染的內容
+ * @param {Object} options - 渲染選項
+ */
+function renderRichContent(container, content, options = {}) {
+    try {
+        // 驗證輸入
+        Validator.validateElement(container);
+        Validator.validateInput(content);
+
+        // 根據內容類型選擇渲染策略
+        if (options.plainText) {
+            // 純文本：使用 textContent
+            setTextContent(container, content);
+        } else if (options.allowHtml) {
+            // HTML：使用淨化和 DocumentFragment
+            setSanitizedHTML(container, content);
+        } else if (options.markdown) {
+            // Markdown：先轉換後淨化
+            const htmlContent = markdownToHtml(content);
+            setSanitizedHTML(container, htmlContent);
+        } else {
+            // 預設：轉義 HTML
+            const safeText = createSafeTextNode(container, escapeHtml(content));
+            container.appendChild(safeText);
+        }
+
+        // 添加安全屬性
+        if (container.tagName === 'A') {
+            container.setAttribute('rel', 'noopener noreferrer');
+        }
+
+        // 記錄操作
+        Logger.logSecurityEvent('content-rendered', {
+            type: options.plainText ? 'text' : (options.allowHtml ? 'html' : 'escaped'),
+            length: content.length
+        });
+
+    } catch (error) {
+        Logger.logSecurityEvent('render-error', {
+            error: error.message,
+            content: content.substring(0, 100) + '...'
+        });
+        throw error;
+    }
+}
+
+/**
+ * 創建安全的互動元素
+ * @param {HTMLElement} container - 容器元素
+ * @param {Object} config - 元素配置
+ * @returns {HTMLElement} 新創建的元素
+ */
+function createSecureInteractiveElement(container, config) {
+    try {
+        const element = createElement(container, config.tag || 'div', {
+            text: config.text,
+            attributes: {
+                'class': config.className,
+                'id': config.id,
+                'data-action': config.action
+            }
+        });
+
+        // 使用事件委派而不是內聯事件處理器
+        if (config.onClick) {
+            element.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = e.currentTarget.getAttribute('data-action');
+                if (action && typeof config.onClick === 'function') {
+                    config.onClick(e);
+                }
+            });
+        }
+
+        return element;
+    } catch (error) {
+        Logger.logSecurityEvent('create-element-error', {
+            error: error.message,
+            config: JSON.stringify(config)
+        });
+        throw error;
+    }
 }
