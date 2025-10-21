@@ -29,6 +29,8 @@ RUN sed -i 's/listen\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf && \
     sed -i 's/listen\s*\[::\]:80;/listen [::]:8080;/g' /etc/nginx/conf.d/default.conf && \
     sed -i '/user\s*nginx;/d' /etc/nginx/nginx.conf && \
     sed -i 's,/var/run/nginx.pid,/tmp/nginx.pid,' /etc/nginx/nginx.conf && \
+    sed -i 's,error_log /var/log/nginx/error.log,error_log /var/lib/nginx/logs/error.log,' /etc/nginx/nginx.conf && \
+    sed -i 's,access_log /var/log/nginx/access.log,access_log /var/lib/nginx/logs/access.log,' /etc/nginx/nginx.conf && \
     sed -i "/^http {/a \    proxy_temp_path /tmp/proxy_temp;\n    client_body_temp_path /tmp/client_temp;\n    fastcgi_temp_path /tmp/fastcgi_temp;\n    uwsgi_temp_path /tmp/uwsgi_temp;\n    scgi_temp_path /tmp/scgi_temp;\n" /etc/nginx/nginx.conf
 
 # 創建非 root 用戶和必要的目錄
@@ -36,20 +38,23 @@ RUN addgroup -S appgroup && \
     adduser -S -G appgroup -H -D -h /var/cache/nginx appuser && \
     mkdir -p /var/cache/nginx && \
     mkdir -p /var/lib/nginx/logs && \
+    mkdir -p /var/lib/nginx && \
     touch /var/lib/nginx/logs/error.log && \
     touch /var/lib/nginx/logs/access.log && \
     chown -R appuser:appgroup /var/cache/nginx && \
     chown -R appuser:appgroup /var/log/nginx && \
     chown -R appuser:appgroup /var/lib/nginx && \
-    chown -R appuser:appgroup /etc/nginx/conf.d && \
+    chown -R appuser:appgroup /etc/nginx && \
     touch /var/run/nginx.pid && \
     chown -R appuser:appgroup /var/run/nginx.pid && \
-    chmod -R 755 /var/cache/nginx && \
-    chmod -R 755 /var/log/nginx && \
-    chmod -R 755 /var/lib/nginx && \
-    chmod -R 755 /etc/nginx/conf.d && \
+    chmod -R 777 /var/cache/nginx && \
+    chmod -R 777 /var/log/nginx && \
+    chmod -R 777 /var/lib/nginx && \
+    chmod -R 777 /etc/nginx && \
     chown -R appuser:appgroup /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
+    chmod -R 755 /usr/share/nginx/html && \
+    chmod 777 /var/lib/nginx/logs/error.log && \
+    chmod 777 /var/lib/nginx/logs/access.log
 
 # 切換到非 root 用戶
 USER appuser:appgroup
